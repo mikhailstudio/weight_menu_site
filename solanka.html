@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный Рецепт: Классическая Солянка</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Hearth Tones -->
+    <!-- Application Structure Plan: Я разработал это приложение как интерактивную кулинарную панель, а не как статический рецепт. Структура состоит из четырех ключевых блоков: 1. Панель управления: позволяет пользователю динамически изменять количество порций с помощью ползунка, что немедленно обновляет список ингредиентов. 2. Список ингредиентов: разделен на логические группы (бульон, основа, подача) с чекбоксами для удобства. 3. Пошаговое руководство: процесс приготовления представлен в виде четких, последовательных этапов с указанием времени. 4. Визуализация времени: интерактивная диаграмма, показывающая общую продолжительность и длительность каждого этапа. Такая структура превращает пассивное чтение рецепта в активный, управляемый процесс, делая приготовление пищи более организованным и менее сложным. -->
+    <!-- Visualization & Content Choices: 1. Калькулятор порций: Информация -> Цель: Масштабирование рецепта -> Метод: HTML-ползунок + JS -> Взаимодействие: Ползунок обновляет текстовые значения количества ингредиентов -> Обоснование: Устраняет необходимость ручных расчетов, повышая практичность. 2. Таймлайн приготовления: Информация -> Цель: Визуализировать процесс во времени -> Метод: Горизонтальная гистограмма (Chart.js) -> Взаимодействие: Наведение курсора для получения подсказок о каждом этапе -> Обоснование: Дает пользователю наглядное представление о временных затратах и последовательности действий, что лучше, чем просто список. -> Библиотека: Chart.js (Canvas). -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FEFBF6;
+            color: #6B4F4F;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 250px;
+            max-height: 300px;
+        }
+        ::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #A0522D;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        ::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #A0522D;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-[#A0522D] mb-2">Классическая Мясная Солянка</h1>
+            <p class="text-lg text-[#D2691E]">Идеальный рецепт для уютного домашнего обеда. Насыщенный, ароматный и простой в приготовлении.</p>
+        </header>
+
+        <main>
+            <section id="controls" class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                 <h2 class="text-2xl font-bold text-[#A0522D] mb-4 text-center">Панель управления рецептом</h2>
+                 <p class="text-center mb-6 text-gray-600">Этот раздел поможет вам спланировать приготовление. Используйте ползунок, чтобы отрегулировать количество порций — список ингредиентов обновится автоматически. Визуализация ниже показывает распределение времени по основным этапам готовки.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mb-6">
+                    <div>
+                        <span class="block text-sm font-medium text-gray-500">Общее время</span>
+                        <span class="block text-2xl font-bold text-[#D2691E]">~2 часа</span>
+                    </div>
+                    <div>
+                        <span class="block text-sm font-medium text-gray-500">Активное время</span>
+                        <span class="block text-2xl font-bold text-[#D2691E]">~40 минут</span>
+                    </div>
+                    <div>
+                        <label for="servings-slider" class="block text-sm font-medium text-gray-500">Количество порций</label>
+                        <span id="servings-display" class="block text-2xl font-bold text-[#D2691E]">8</span>
+                    </div>
+                </div>
+                <div class="w-full px-4">
+                    <input id="servings-slider" type="range" min="2" max="16" value="8" step="2" class="w-full h-2 bg-[#EADBC8] rounded-lg appearance-none cursor-pointer">
+                </div>
+                 <div class="chart-container mt-8">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </section>
+            
+            <section id="ingredients" class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-bold text-center text-[#A0522D] mb-6">Ингредиенты</h2>
+                <p class="text-center mb-8 text-gray-600">Здесь перечислены все необходимые продукты. Мы разделили их на группы для вашего удобства. Отмечайте то, что у вас уже есть, чтобы ничего не забыть при походе в магазин.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8" id="ingredients-list">
+                    <div>
+                        <h3 class="font-bold text-lg text-[#D2691E] mb-3 border-b-2 border-[#EADBC8] pb-2">Для бульона:</h3>
+                        <ul class="space-y-2">
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Говядина на кости: <span data-base="100" data-unit="г">800 г</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Вода: <span data-base="0.5" data-unit="л">4 л</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Луковица: <span data-base="0.25" data-unit=" шт">2 шт</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Морковь: <span data-base="0.25" data-unit=" шт">2 шт</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Лавровый лист: <span data-base="0.5" data-unit=" шт">4 шт</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Перец горошком: <span data-base="1.25" data-unit=" шт">10 шт</span></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-[#D2691E] mb-3 border-b-2 border-[#EADBC8] pb-2">Для основы солянки:</h3>
+                        <ul class="space-y-2">
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Мясные деликатесы (копчености, сосиски, ветчина): <span data-base="75" data-unit="г">600 г</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Соленые огурцы: <span data-base="0.5" data-unit=" шт">4 шт</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Луковица (для зажарки): <span data-base="0.25" data-unit=" шт">2 шт</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Томатная паста: <span data-base="0.5" data-unit=" ст.л.">4 ст.л.</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Маслины без косточек: <span data-base="12.5" data-unit="г">100 г</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Каперсы (по желанию): <span data-base="0.25" data-unit=" ч.л.">2 ч.л.</span></li>
+                            <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Растительное масло: <span data-base="0.5" data-unit=" ст.л.">4 ст.л.</span></li>
+                             <li><input type="checkbox" class="mr-2 accent-[#A0522D]">Огуречный рассол: <span data-base="25" data-unit="мл">200 мл</span></li>
+                        </ul>
+                    </div>
+                    <div class="md:col-span-2">
+                        <h3 class="font-bold text-lg text-center text-[#D2691E] mb-3 border-b-2 border-[#EADBC8] pb-2">Для подачи:</h3>
+                        <ul class="space-y-2 text-center">
+                            <li>Лимон</li>
+                            <li>Сметана</li>
+                            <li>Свежая зелень (петрушка, укроп)</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="gemini-assistant" class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-bold text-center text-[#A0522D] mb-4">✨ Кулинарный Помощник Gemini</h2>
+                <p class="text-center mb-6 text-gray-600">Не хватает вдохновения? Наш ИИ-помощник, основанный на технологии Gemini, готов предложить уникальные идеи, чтобы сделать вашу солянку незабываемой.</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
+                    <button id="get-chef-tips" class="bg-[#A0522D] text-white font-bold py-2 px-4 rounded-lg hover:bg-[#D2691E] transition duration-300 shadow-md hover:shadow-lg">✨ Советы от шеф-повара</button>
+                    <button id="get-pairings" class="bg-[#A0522D] text-white font-bold py-2 px-4 rounded-lg hover:bg-[#D2691E] transition duration-300 shadow-md hover:shadow-lg">✨ Подбор напитков и закусок</button>
+                </div>
+                <div id="gemini-response-container" class="mt-4 p-4 bg-[#FEFBF6] rounded-lg min-h-[120px] border border-[#EADBC8] transition-all duration-300">
+                    <p class="text-center text-gray-500">Здесь появятся ответы от нашего ИИ-помощника...</p>
+                </div>
+            </section>
+
+            <section id="steps">
+                <h2 class="text-3xl font-bold text-center text-[#A0522D] mb-8">Пошаговое приготовление</h2>
+                <div class="space-y-8">
+                    
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-2xl font-bold text-[#D2691E] mb-3">Этап 1: Варка бульона</h3>
+                        <p class="text-sm text-gray-500 mb-4">Время: ~1.5 часа (активное: 10 минут)</p>
+                        <p class="mb-4 text-gray-600">Основа вкуса солянки — крепкий и ароматный бульон. Не торопитесь на этом этапе, позвольте мясу отдать весь свой вкус.</p>
+                        <ol class="list-decimal list-inside space-y-2">
+                            <li>Говядину на кости промойте, залейте холодной водой и доведите до кипения.</li>
+                            <li>Снимите пену, уменьшите огонь до минимума. Добавьте в кастрюлю целую очищенную луковицу, морковь, лавровый лист и перец горошком.</li>
+                            <li>Варите на медленном огне под крышкой 1.5 часа. Бульон не должен сильно кипеть.</li>
+                            <li>Готовый бульон процедите. Мясо отделите от кости и нарежьте соломкой.</li>
+                        </ol>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-2xl font-bold text-[#D2691E] mb-3">Этап 2: Подготовка зажарки</h3>
+                        <p class="text-sm text-gray-500 mb-4">Время: ~15 минут (активное: 15 минут)</p>
+                         <p class="mb-4 text-gray-600">Зажарка придает солянке характерный кисло-соленый вкус и насыщенный цвет. Именно здесь простые ингредиенты превращаются в концентрированную вкусовую базу супа.</p>
+                        <ol class="list-decimal list-inside space-y-2">
+                            <li>Лук для зажарки мелко нарежьте. Соленые огурцы нарежьте мелкой соломкой.</li>
+                            <li>В сковороде разогрейте растительное масло, обжарьте лук до прозрачности (5-7 минут).</li>
+                            <li>Добавьте к луку соленые огурцы и тушите вместе еще 5 минут.</li>
+                            <li>Добавьте томатную пасту, хорошо перемешайте и готовьте еще 2-3 минуты.</li>
+                        </ol>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-2xl font-bold text-[#D2691E] mb-3">Этап 3: Сборка и варка солянки</h3>
+                        <p class="text-sm text-gray-500 mb-4">Время: ~15-20 минут (активное: 15 минут)</p>
+                         <p class="mb-4 text-gray-600">На этом этапе мы соединяем все компоненты воедино. Важно дать супу немного настояться после варки, чтобы все вкусы объединились в гармоничный ансамбль.</p>
+                        <ol class="list-decimal list-inside space-y-2">
+                            <li>Все мясные деликатесы нарежьте соломкой.</li>
+                            <li>В процеженный бульон верните нарезанное вареное мясо. Доведите до кипения.</li>
+                            <li>Добавьте в кастрюлю нарезанные мясные деликатесы и зажарку.</li>
+                            <li>Влейте огуречный рассол. Добавьте маслины (целиком или колечками) и каперсы.</li>
+                            <li>Попробуйте на соль и перец. Обычно соли достаточно от огурцов и деликатесов, но при необходимости досолите.</li>
+                            <li>Варите на слабом огне 10-15 минут. Затем выключите огонь и дайте настояться под крышкой еще 10-15 минут.</li>
+                        </ol>
+                    </div>
+
+                     <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                        <h3 class="text-2xl font-bold text-[#D2691E] mb-3">Этап 4: Подача</h3>
+                         <p class="mb-4 text-gray-600">Финальный штрих, который делает солянку по-настоящему ресторанным блюдом. Не пренебрегайте этим шагом!</p>
+                        <p>Разлейте горячую солянку по тарелкам. В каждую тарелку добавьте ложку сметаны, кружочек лимона и посыпьте свежей рубленой зеленью. Приятного аппетита!</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>&copy; 2025 Кулинарный Помощник. Все права защищены.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const servingsSlider = document.getElementById('servings-slider');
+            const servingsDisplay = document.getElementById('servings-display');
+            const ingredientsList = document.getElementById('ingredients-list');
+            const ingredients = ingredientsList.querySelectorAll('span[data-base]');
+
+            const baseServings = 8;
+
+            function updateIngredients() {
+                const currentServings = parseInt(servingsSlider.value);
+                servingsDisplay.textContent = currentServings;
+
+                ingredients.forEach(ingredient => {
+                    const baseAmount = parseFloat(ingredient.dataset.base);
+                    const unit = ingredient.dataset.unit;
+                    
+                    const newAmount = (baseAmount / baseServings) * currentServings;
+
+                    let formattedAmount;
+                    if (newAmount >= 1000 && (unit === 'г' || unit === 'мл')) {
+                         formattedAmount = (newAmount / 1000).toFixed(1);
+                         ingredient.textContent = `${formattedAmount} ${unit === 'г' ? 'кг' : 'л'}`;
+                    } else if (Number.isInteger(newAmount)) {
+                        formattedAmount = newAmount;
+                        ingredient.textContent = `${formattedAmount} ${unit}`;
+                    } else {
+                        formattedAmount = newAmount.toFixed(1).replace('.0', '');
+                        ingredient.textContent = `${formattedAmount} ${unit}`;
+                    }
+                });
+            }
+
+            servingsSlider.addEventListener('input', updateIngredients);
+            
+            updateIngredients();
+
+            const ctx = document.getElementById('timelineChart').getContext('2d');
+            const timelineChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Варка бульона', 'Зажарка', 'Сборка', 'Настаивание'],
+                    datasets: [{
+                        label: 'Длительность (минуты)',
+                        data: [
+                            {x: [0, 90], y: 'Варка бульона'},
+                            {x: [90, 105], y: 'Зажарка'},
+                            {x: [105, 120], y: 'Сборка'},
+                            {x: [120, 135], y: 'Настаивание'}
+                        ],
+                        backgroundColor: [
+                            'rgba(210, 105, 30, 0.6)',
+                            'rgba(160, 82, 45, 0.6)',
+                            'rgba(210, 105, 30, 0.8)',
+                            'rgba(234, 219, 200, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgb(210, 105, 30)',
+                            'rgb(160, 82, 45)',
+                            'rgb(210, 105, 30)',
+                            'rgb(234, 219, 200)'
+                        ],
+                        borderWidth: 1,
+                        barPercentage: 0.5,
+                        categoryPercentage: 0.8,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Визуализация процесса приготовления (минуты)',
+                            color: '#6B4F4F',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const item = context.raw;
+                                    const start = item.x[0];
+                                    const end = item.x[1];
+                                    const duration = end - start;
+                                    return `${context.dataset.label}: ${duration} мин.`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            min: 0,
+                            max: 140,
+                            title: {
+                                display: true,
+                                text: 'Минуты от начала',
+                                color: '#6B4F4F'
+                            }
+                        },
+                        y: {
+                           grid: {
+                                display: false
+                           }
+                        }
+                    }
+                }
+            });
+
+            const getChefTipsBtn = document.getElementById('get-chef-tips');
+            const getPairingsBtn = document.getElementById('get-pairings');
+            const geminiResponseContainer = document.getElementById('gemini-response-container');
+
+            const apiKey = ""; 
+
+     
